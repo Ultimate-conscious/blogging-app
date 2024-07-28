@@ -6,7 +6,9 @@ const app = new Hono()
 app.route('/',mainRouter);
 
 app.get('/', (c) => {
-  return c.text('Hello Hono!')
+    
+  return c.text('hello');
+
 })
 
 export default app
