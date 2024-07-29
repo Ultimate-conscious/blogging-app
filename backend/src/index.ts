@@ -1,14 +1,13 @@
 import { Hono } from 'hono'
-import { mainRouter } from './routes';
+import { mainRouter } from './routes/index';
 
-const app = new Hono()
+const app = new Hono<{
+  Bindings: {
+      DATABASE_URL: string;
+      JWT_SECRET: string;
+  }
+}>()
 
-app.route('/',mainRouter);
-
-app.get('/', (c) => {
-    
-  return c.text('hello');
-
-})
+app.route('/api/v1',mainRouter);
 
 export default app

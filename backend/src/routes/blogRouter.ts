@@ -1,19 +1,100 @@
-import { Hono }from 'hono';
+import { PrismaClient } from "@prisma/client/edge";
+import { withAccelerate } from "@prisma/extension-accelerate";
+import { createBlogInput, updateBlogInput } from "@ultimate-conscious/common";
+import { Hono } from "hono";
+import { verify } from "hono/jwt";
 
-const blogRouter = new Hono().basePath('/blog')
+export const blogRouter = new Hono<{
+    Bindings: {
+        DATABASE_URL: string;
+        JWT_SECRET: string;
+    },
+    Variables: {
+        jwtPayload: string
+    }
+}>();
 
-blogRouter.post('/',c => c.text("post blogs"));
+blogRouter.use(async (c, next) => {
+    const jwt = c.req.header('Authorization') || "";
+	if (!jwt) {
+		c.status(401);
+		return c.json({ error: "unauthorized" });
+	}
+	const token = jwt.split(' ')[1];
+	const payload = await verify(token, c.env.JWT_SECRET);
+	if (!payload) {
+		c.status(401);
+		return c.json({ error: "unauthorized" });
+	}
+	c.set("jwtPayload", payload.id);
+	await next()
+});
 
-blogRouter.put('/',c => c.text("put blogs"));
+blogRouter.post('/', async (c) => {
+	const userId = c.get("jwtPayload");
+	const prisma = new PrismaClient({
+		datasourceUrl: c.env?.DATABASE_URL	,
+	}).$extends(withAccelerate());
 
-blogRouter.get('/:id',(c)=> {
-    const id = c.req.param('id');
-    return c.text(`you sent this id-> ${id}`);
+	const body = await c.req.json();
+	const {success} = createBlogInput.safeParse(body);
+    if(!success){
+        c.status(411);
+        return c.json({
+            error: "Input format invalid"
+        })
+    }
+	const post = await prisma.post.create({
+		data: {
+			title: body.title,
+			content: body.content,
+			authorId: userId
+		}
+	});
+	return c.json({
+		id: post.id
+	});
 })
 
-//blogRouter.get('/bulk/',(c)=> c.text("saare blogs bhej"))
+blogRouter.put('/', async (c) => {
+	const userId = c.get("jwtPayload");
+	const prisma = new PrismaClient({
+		datasourceUrl: c.env?.DATABASE_URL	,
+	}).$extends(withAccelerate());
 
+	const body = await c.req.json();
+	const {success} = updateBlogInput.safeParse(body);
+    if(!success){
+        c.status(411);
+        return c.json({
+            error: "Input format invalid"
+        })
+    }
+	prisma.post.update({
+		where: {
+			id: body.id,
+			authorId: userId
+		},
+		data: {
+			title: body.title,
+			content: body.content
+		}
+	});
 
-export  {
-    blogRouter
-}
+	return c.text('updated post');
+});
+
+blogRouter.get('/:id', async (c) => {
+	const id = c.req.param('id');
+	const prisma = new PrismaClient({
+		datasourceUrl: c.env?.DATABASE_URL	,
+	}).$extends(withAccelerate());
+	
+	const post = await prisma.post.findUnique({
+		where: {
+			id
+		}
+	});
+
+	return c.json(post);
+})

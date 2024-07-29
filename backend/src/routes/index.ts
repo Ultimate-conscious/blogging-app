@@ -2,11 +2,16 @@ import { Hono }from 'hono';
 import { userRouter } from './userRouter';
 import { blogRouter } from './blogRouter';
 
-const mainRouter = new Hono().basePath('/api/v1')
+const mainRouter = new Hono<{
+    Bindings: {
+        DATABASE_URL: string;
+        JWT_SECRET: string;
+    }
+  }>()
 
 
-mainRouter.route('/',userRouter);
-mainRouter.route('/',blogRouter);
+mainRouter.route('/user',userRouter);
+mainRouter.route('/blog',blogRouter);
 
 export  {
     mainRouter
