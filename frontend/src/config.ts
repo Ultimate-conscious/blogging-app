@@ -1,0 +1,1 @@
+export const BACKEND_URL = "https://backend.prlanjewar2002.workers.dev"

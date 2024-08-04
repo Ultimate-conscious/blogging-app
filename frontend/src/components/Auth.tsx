@@ -1,7 +1,9 @@
-import { Link } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import { LabelledInput } from "./LabelledInput"
 import { useState } from "react"
 import { SignupInput } from "@ultimate-conscious/common"
+import axios from "axios"
+import { BACKEND_URL } from "../config"
 
 interface authInputs{
     heading: string
@@ -17,7 +19,22 @@ export const Auth = ({heading, subHeading, redirect}:authInputs)=>{
         email: "",
         password: ""
     })
+    const navigate = useNavigate()
 
+
+    async function sendRequest(){
+        try {
+            const response = await axios.post(`${BACKEND_URL}/api/v1/user/${(redirect)?'signup':"signin"}`,state);
+            const {jwt,name} = response.data;
+            localStorage.setItem("token",jwt);
+            localStorage.setItem("name",name);
+            navigate('/blogs')
+
+        } catch (error) {
+            alert("Error while Signing up")
+        }
+        
+    }
     return (
         <div className="h-screen flex justify-center flex-col">
             <div className="flex justify-center">
@@ -45,19 +62,19 @@ export const Auth = ({heading, subHeading, redirect}:authInputs)=>{
                     <LabelledInput label="Email" placeholder="Johndoe@gmail.com" onchange={(e)=>{
                         setState({
                             ...state,
-                            password: e.target.value
+                            email: e.target.value
                         })
                     }}/>
                     <LabelledInput label="Password" placeholder="*******" onchange={(e)=>{
                         //can also be done this way
                         setState(c=> ({
                             ...c,
-                            email: e.target.value
+                            password: e.target.value
                         }))
                     }}/>
                     <div className="flex justify-center pt-4">
-                        <button type="button" className="text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:focus:ring-gray-700">
-                            {(redirect)?'Signup':"Login"}
+                        <button type="button" onClick={sendRequest} className="text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:focus:ring-gray-700">
+                        {(redirect)?'Signup':"Login"}
                         </button>
                     </div>
                     
